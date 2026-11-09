@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Terminal - TradingView / Bloomberg Grid</title>
+  <style>
+    :root {
+      --bg-primary: #131722;
+      --bg-panel: #1e222d;
+      --bg-input: #2a2e39;
+      --border-color: #2a2e39;
+      --text-primary: #d1d4dc;
+      --text-muted: #787b86;
+      --bullish: #26a69a;
+      --bearish: #ef5350;
+      --accent-cyan: #00ffa3;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Terminal Grid Layout */
+    .terminal-grid {
+      display: grid;
+      grid-template-rows: 46px 1fr 28px;
+      grid-template-columns: 280px 1fr 360px;
+      grid-template-areas:
+        "header header header"
+        "sidebar center right"
+        "footer footer footer";
+      height: 100vh;
+      width: 100vw;
+      gap: 2px;
+      background-color: #0b0e14;
+    }
+
+    /* 1. Header */
+    .terminal-header {
+      grid-area: header;
+      background-color: var(--bg-panel);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+    }
+
+    .brand {
+      font-weight: 800;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .ticker-tape {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .tape-item {
+      display: flex;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* 2. Left Sidebar (Watchlist) */
+    .terminal-sidebar {
+      grid-area: sidebar;
+      background-color: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .watchlist-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .watchlist-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .watchlist-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(42, 46, 57, 0.4);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .watchlist-row:hover, .watchlist-row.active {
+      background-color: rgba(42, 46, 57, 0.7);
+    }
+
+    /* 3. Center Area */
+    .terminal-center {
+      grid-area: center;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .chart-container {
+      flex: 5;
+      background-color: var(--bg-panel);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .chart-canvas {
+      flex: 1;
+      width: 100%;
+      border-radius: 4px;
+      background: #131722;
+      position: relative;
+    }
+
+    .indicators-container {
+      flex: 2;
+      background-color: var(--bg-panel);
+      border-top: 1px solid var(--border-color);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .indicator-pills {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .financials-container {
+      flex: 3;
+      background-color: var(--bg-panel);
+      border-top: 1px solid var(--border-color);
+      padding: 12px 14px;
+      overflow-y: auto;
+    }
+
+    table.financial-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    table.financial-table th {
+      color: var(--text-muted);
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    table.financial-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(42, 46, 57, 0.3);
+    }
+
+    /* 4. Right Panel */
+    .terminal-right {
+      grid-area: right;
+      background-color: var(--bg-panel);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .order-box {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .order-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .btn-buy {
+      flex: 1;
+      padding: 9px;
+      background-color: var(--bullish);
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-sell {
+      flex: 1;
+      padding: 9px;
+      background-color: var(--bearish);
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .btn-transmit {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent-cyan);
+      border: none;
+      border-radius: 4px;
+      color: #0b0e14;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .portfolio-summary {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 13px;
+    }
+
+    .portfolio-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .positions-section {
+      padding: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 5. Footer */
+    .terminal-footer {
+      grid-area: footer;
+      background-color: #0b0e14;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .text-green { color: var(--bullish); }
+    .text-red { color: var(--bearish); }
+    .text-cyan { color: var(--accent-cyan); }
+  </style>
+</head>
+<body>
+  <div class="terminal-grid">
+    <!-- Header -->
+    <header class="terminal-header">
+      <div class="brand">
+        <span>⚡ QUANTUM INTELLIGENCE TERMINAL</span>
+      </div>
+      <div class="ticker-tape">
+        <div class="tape-item"><span>SPY</span> <span id="tape-SPY">$512.45</span> <span class="text-green">+0.78%</span></div>
+        <div class="tape-item"><span>QQQ</span> <span id="tape-QQQ">$445.80</span> <span class="text-green">+1.12%</span></div>
+        <div class="tape-item"><span>BTC</span> <span id="tape-BTC">$64,920</span> <span class="text-red">-0.35%</span></div>
+        <div class="tape-item"><span>NVDA</span> <span id="tape-NVDA">$895.10</span> <span class="text-green">+3.45%</span></div>
+      </div>
+      <div>
+        PORTFOLIO VALUE: <b class="text-cyan" id="header-portfolio-val">$104,820.00</b>
+      </div>
+    </header>
+
+    <!-- Left Sidebar: Watchlist -->
+    <aside class="terminal-sidebar">
+      <div class="watchlist-header">
+        <span>Watchlist Universe</span>
+        <span class="text-cyan">● LIVE TICKS</span>
+      </div>
+      <div class="watchlist-list" id="watchlist-container">
+        <div class="watchlist-row active" onclick="selectSymbol('AAPL')">
+          <div><b>AAPL</b><br><small style="color:var(--text-muted);">Apple Inc.</small></div>
+          <div style="text-align: right;"><b id="wl-price-AAPL">$182.40</b><br><span class="text-green">+1.25%</span></div>
+        </div>
+        <div class="watchlist-row" onclick="selectSymbol('NVDA')">
+          <div><b>NVDA</b><br><small style="color:var(--text-muted);">NVIDIA Corp.</small></div>
+          <div style="text-align: right;"><b id="wl-price-NVDA">$895.10</b><br><span class="text-green">+3.45%</span></div>
+        </div>
+        <div class="watchlist-row" onclick="selectSymbol('MSFT')">
+          <div><b>MSFT</b><br><small style="color:var(--text-muted);">Microsoft Corp.</small></div>
+          <div style="text-align: right;"><b id="wl-price-MSFT">$415.80</b><br><span class="text-green">+0.85%</span></div>
+        </div>
+        <div class="watchlist-row" onclick="selectSymbol('TSLA')">
+          <div><b>TSLA</b><br><small style="color:var(--text-muted);">Tesla Inc.</small></div>
+          <div style="text-align: right;"><b id="wl-price-TSLA">$178.50</b><br><span class="text-red">-1.65%</span></div>
+        </div>
+        <div class="watchlist-row" onclick="selectSymbol('BTC-USD')">
+          <div><b>BTC-USD</b><br><small style="color:var(--text-muted);">Bitcoin USD</small></div>
+          <div style="text-align: right;"><b id="wl-price-BTC-USD">$64,920.00</b><br><span class="text-red">-0.35%</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Area: Candlestick, Indicators, Financials -->
+    <main class="terminal-center">
+      <!-- Candlestick Box -->
+      <div class="chart-container">
+        <div class="chart-header">
+          <div>
+            <b style="font-size: 18px;" id="active-symbol-title">AAPL</b>
+            <span style="color: var(--text-muted); font-size: 13px; margin-left: 8px;">NASDAQ &bull; 1D Bar &bull; Real-Time Stream</span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span style="font-size: 20px; font-weight: 800;" id="live-spot-price" class="text-green">$182.40</span>
+            <span style="background: rgba(38, 166, 154, 0.2); color: var(--bullish); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 700;">+1.25%</span>
+          </div>
+        </div>
+        <div class="chart-canvas" id="candlestick-canvas">
+          <!-- Canvas / SVG SVG Candlesticks -->
+          <svg width="100%" height="100%" id="chart-svg" style="display: block;"></svg>
+        </div>
+      </div>
+
+      <!-- Middle: Technical Indicators -->
+      <div class="indicators-container">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+          Technical Alpha Factors & Oscillators
+        </div>
+        <div class="indicator-pills">
+          <div>RSI (14): <b style="color: #38bdf8;" id="live-rsi">58.4</b> (Neutral)</div>
+          <div>MACD (12, 26): <b class="text-green" id="live-macd">+0.85</b> (Bullish Cross)</div>
+          <div>20-Day Vol: <b id="live-vol">21.4%</b></div>
+          <div>AI Verdict: <b class="text-green" id="live-verdict">STRONG BUY (82/100)</b></div>
+        </div>
+      </div>
+
+      <!-- Bottom: Financial Statements -->
+      <div class="financials-container">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">
+          Corporate Financial Statements & Valuation Health
+        </div>
+        <table class="financial-table">
+          <thead>
+            <tr>
+              <th>Financial Metric</th>
+              <th>2024 (TTM)</th>
+              <th>2023</th>
+              <th>2022</th>
+              <th>Health Benchmark</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Total Revenue ($M)</td><td>$385,600</td><td>$383,285</td><td>$394,328</td><td><span class="text-green">Top Decile</span></td></tr>
+            <tr><td>Gross Margin</td><td>46.2%</td><td>44.1%</td><td>43.3%</td><td><span class="text-green">Expanding</span></td></tr>
+            <tr><td>Return on Equity (ROE)</td><td>36.8%</td><td>34.5%</td><td>32.1%</td><td><span class="text-green">Moat Tier 1</span></td></tr>
+            <tr><td>Trailing P/E Ratio</td><td>29.4</td><td>28.1</td><td>24.5</td><td><span class="text-cyan">Fair Value</span></td></tr>
+            <tr><td>Debt-to-Equity</td><td>0.82</td><td>0.88</td><td>0.94</td><td><span class="text-green">Solvent</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Right Panel: Order Execution, Portfolio, Active Positions -->
+    <aside class="terminal-right">
+      <div class="order-box">
+        <div style="font-size: 12px; font-weight: 700; margin-bottom: 10px; color: var(--text-muted); text-transform: uppercase;">
+          Order Execution Panel
+        </div>
+        <div class="order-toggle">
+          <button class="btn-buy" id="btn-action-buy" onclick="setOrderAction('BUY')">BUY</button>
+          <button class="btn-sell" id="btn-action-sell" onclick="setOrderAction('SELL')">SELL</button>
+        </div>
+
+        <div class="form-group">
+          <label>Order Type</label>
+          <select class="form-input" id="order-type">
+            <option value="MARKET">Market Order</option>
+            <option value="LIMIT">Limit Order</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Quantity (Shares)</label>
+          <input type="number" class="form-input" id="order-shares" value="10" min="1" oninput="updateOrderPreview()" />
+        </div>
+
+        <div class="form-group">
+          <label>Stop-Loss ($)</label>
+          <input type="number" class="form-input" id="order-sl" placeholder="Optional e.g. 175.00" step="0.5" />
+        </div>
+
+        <div class="form-group">
+          <label>Take-Profit ($)</label>
+          <input type="number" class="form-input" id="order-tp" placeholder="Optional e.g. 195.00" step="0.5" />
+        </div>
+
+        <div style="font-size: 12px; margin-bottom: 8px; color: var(--text-muted);">
+          Estimated Cost: <b class="text-cyan" id="order-est-cost">$1,824.00</b>
+        </div>
+
+        <button class="btn-transmit" onclick="executeVirtualOrder()">TRANSMIT ORDER</button>
+      </div>
+
+      <div class="portfolio-summary">
+        <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase;">
+          Portfolio Summary
+        </div>
+        <div class="portfolio-row"><span>Total Portfolio:</span><b id="p-total-val">$104,820.00</b></div>
+        <div class="portfolio-row"><span>Cash Balance:</span><b id="p-cash-val">$82,450.00</b></div>
+        <div class="portfolio-row"><span>Holdings Value:</span><b id="p-hold-val">$22,370.00</b></div>
+        <div class="portfolio-row"><span>Unrealized P&L:</span><b class="text-green" id="p-pnl-val">+$4,820.00 (+4.8%)</b></div>
+      </div>
+
+      <div class="positions-section">
+        <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase;">
+          Active Positions Table
+        </div>
+        <table class="financial-table">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Qty</th>
+              <th>Entry</th>
+              <th>P&L</th>
+            </tr>
+          </thead>
+          <tbody id="positions-tbody">
+            <tr>
+              <td><b>AAPL</b></td>
+              <td>50</td>
+              <td>$178.00</td>
+              <td><b class="text-green">+$220.00</b></td>
+            </tr>
+            <tr>
+              <td><b>NVDA</b></td>
+              <td>15</td>
+              <td>$870.00</td>
+              <td><b class="text-green">+$376.50</b></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+
+    <!-- Footer Status Bar -->
+    <footer class="terminal-footer">
+      <div>STATUS: <span class="text-green" id="conn-status">● WEBSOCKET LIVE STREAMING</span> &bull; LATENCY: 12ms</div>
+      <div>CSAIML FINANCIAL INTELLIGENCE CORE ONLINE &bull; PORT 8000 / 8501</div>
+    </footer>
+  </div>
+
+  <script>
+    let currentSymbol = "AAPL";
+    let currentPrice = 182.40;
+    let selectedAction = "BUY";
+    let socket = null;
+
+    function selectSymbol(sym) {
+      currentSymbol = sym;
+      document.getElementById("active-symbol-title").innerText = sym;
+      document.querySelectorAll(".watchlist-row").forEach(el => el.classList.remove("active"));
+      event.currentTarget.classList.add("active");
+      connectWebSocket(sym);
+      updateOrderPreview();
+    }
+
+    function setOrderAction(act) {
+      selectedAction = act;
+      document.getElementById("btn-action-buy").style.opacity = act === "BUY" ? "1" : "0.5";
+      document.getElementById("btn-action-sell").style.opacity = act === "SELL" ? "1" : "0.5";
+      updateOrderPreview();
+    }
+
+    function updateOrderPreview() {
+      const qty = parseFloat(document.getElementById("order-shares").value) || 1;
+      const total = qty * currentPrice;
+      document.getElementById("order-est-cost").innerText = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function executeVirtualOrder() {
+      const qty = parseFloat(document.getElementById("order-shares").value);
+      const sl = document.getElementById("order-sl").value;
+      const tp = document.getElementById("order-tp").value;
+
+      const tbody = document.getElementById("positions-tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><b>${currentSymbol}</b></td>
+        <td>${qty}</td>
+        <td>$${currentPrice.toFixed(2)}</td>
+        <td><b class="text-green">+$0.00</b></td>
+      `;
+      tbody.prepend(row);
+      alert(`Virtual ${selectedAction} Order Executed!\n${qty} shares of ${currentSymbol} at $${currentPrice.toFixed(2)}\nStop-Loss: ${sl || 'None'} | Take-Profit: ${tp || 'None'}`);
+    }
+
+    function drawCandlesticks() {
+      const svg = document.getElementById("chart-svg");
+      svg.innerHTML = "";
+      const width = svg.clientWidth || 700;
+      const height = svg.clientHeight || 300;
+
+      const numBars = 35;
+      const barWidth = (width / numBars) * 0.7;
+      let p = currentPrice - 8;
+
+      for (let i = 0; i < numBars; i++) {
+        const delta = (Math.random() - 0.48) * 2.5;
+        const open = p;
+        const close = open + delta;
+        const high = Math.max(open, close) + Math.random() * 1.5;
+        const low = Math.min(open, close) - Math.random() * 1.5;
+        p = close;
+
+        const isUp = close >= open;
+        const color = isUp ? "#26a69a" : "#ef5350";
+        const x = i * (width / numBars) + 10;
+
+        // Scale to height
+        const minY = currentPrice - 20;
+        const maxY = currentPrice + 20;
+        const scaleY = val => height - ((val - minY) / (maxY - minY)) * (height - 30) - 15;
+
+        // Wick line
+        const wick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        wick.setAttribute("x1", x + barWidth / 2);
+        wick.setAttribute("x2", x + barWidth / 2);
+        wick.setAttribute("y1", scaleY(high));
+        wick.setAttribute("y2", scaleY(low));
+        wick.setAttribute("stroke", color);
+        wick.setAttribute("stroke-width", "1.5");
+        svg.appendChild(wick);
+
+        // Body rect
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", scaleY(Math.max(open, close)));
+        rect.setAttribute("width", barWidth);
+        rect.setAttribute("height", Math.max(2, Math.abs(scaleY(open) - scaleY(close))));
+        rect.setAttribute("fill", color);
+        svg.appendChild(rect);
+      }
+    }
+
+    function connectWebSocket(sym) {
+      if (socket) socket.close();
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/live-feed/${sym}`;
+      
+      try {
+        socket = new WebSocket(wsUrl);
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.price) {
+            currentPrice = data.price;
+            document.getElementById("live-spot-price").innerText = `$${currentPrice.toFixed(2)}`;
+            const wlElem = document.getElementById(`wl-price-${sym}`);
+            if (wlElem) wlElem.innerText = `$${currentPrice.toFixed(2)}`;
+            updateOrderPreview();
+          }
+        };
+      } catch (e) {
+        // Fallback simulation tick if running standalone
+        setInterval(() => {
+          currentPrice += (Math.random() - 0.49) * 0.4;
+          document.getElementById("live-spot-price").innerText = `$${currentPrice.toFixed(2)}`;
+          updateOrderPreview();
+        }, 1000);
+      }
+    }
+
+    window.addEventListener("resize", drawCandlesticks);
+    window.onload = () => {
+      drawCandlesticks();
+      connectWebSocket(currentSymbol);
+      updateOrderPreview();
+    };
+  </script>
+</body>
+</html>
